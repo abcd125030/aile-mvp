@@ -38,15 +38,38 @@
 
 ### 一键启动
 
+先在项目根目录（与 `docker-compose.yml` 同级）创建 `.env`，用于给 Docker Compose 注入环境变量：
+
+```env
+POSTGRES_PASSWORD=abcd125030
+JWT_SECRET=dev-secret-key-change-in-production
+LLM_PROVIDER=qwen
+LLM_MODEL=qwen-plus
+LLM_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
+LLM_API_KEY=你的DashScopeKey
+LLM_TIMEOUT_SECONDS=30
+```
+
+然后执行：
+
 ```bash
 docker-compose up --build
 ```
 
-若 Windows 终端无法直接识别 `docker` 命令，可在 WSL 中执行：
+若 Windows 终端无法直接识别 `docker` 命令，可在 **PowerShell/CMD** 中执行：
 
 ```bash
 wsl -e bash -lc "cd /mnt/d/AI智学体 && docker compose up --build -d"
 ```
+
+如果你已经进入 WSL 终端（提示符类似 `user@host:/mnt/...$`），请直接执行：
+
+```bash
+cd /mnt/d/AI智学体
+docker compose up --build -d
+```
+
+注意：在 WSL 里不要再输入 `wsl -e ...`。
 
 启动完成后：
 
@@ -60,10 +83,17 @@ wsl -e bash -lc "cd /mnt/d/AI智学体 && docker compose up --build -d"
 docker-compose down
 ```
 
-WSL 场景可执行：
+若在 PowerShell/CMD 中停止 WSL 里的服务，可执行：
 
 ```bash
 wsl -e bash -lc "cd /mnt/d/AI智学体 && docker compose down"
+```
+
+如果已经在 WSL 终端中，直接执行：
+
+```bash
+cd /mnt/d/AI智学体
+docker compose down
 ```
 
 如需清除数据卷（重置数据库）：

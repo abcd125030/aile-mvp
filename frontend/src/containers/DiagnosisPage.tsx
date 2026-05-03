@@ -24,6 +24,26 @@ export default function DiagnosisPage() {
   }, [fetchCurrentPlanAndTasks])
 
   const diagnosisSnapshot = useMemo(() => {
+    const activePool = [...groupedTasks.pending, ...groupedTasks.in_progress]
+    const reviewPool = [...groupedTasks.completed]
+    const pool = activePool.length > 0 ? activePool : reviewPool
+    if (pool.length > 0) {
+      const counts = new Map<string, number>()
+      for (const task of pool) {
+        for (const kp of task.knowledge_point_ids) {
+          counts.set(kp, (counts.get(kp) ?? 0) + 1)
+        }
+      }
+
+      return {
+        mode: activePool.length > 0 ? ('active' as const) : ('review' as const),
+        weakPoints: [...counts.entries()]
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 6)
+          .map(([id, count]) => ({ id, label: id, count })),
+      }
+    }
+
     if (appConfig.demoMode) {
       return {
         mode: 'demo' as const,
@@ -35,22 +55,9 @@ export default function DiagnosisPage() {
       }
     }
 
-    const activePool = [...groupedTasks.pending, ...groupedTasks.in_progress]
-    const reviewPool = [...groupedTasks.completed]
-    const pool = activePool.length > 0 ? activePool : reviewPool
-    const counts = new Map<string, number>()
-    for (const task of pool) {
-      for (const kp of task.knowledge_point_ids) {
-        counts.set(kp, (counts.get(kp) ?? 0) + 1)
-      }
-    }
-
     return {
-      mode: activePool.length > 0 ? ('active' as const) : reviewPool.length > 0 ? ('review' as const) : ('empty' as const),
-      weakPoints: [...counts.entries()]
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 6)
-        .map(([id, count]) => ({ id, label: id, count })),
+      mode: 'empty' as const,
+      weakPoints: [],
     }
   }, [groupedTasks.completed, groupedTasks.in_progress, groupedTasks.pending])
 
