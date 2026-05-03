@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 
 import { authService } from '../services/authService'
+import { planService } from '../services/planService'
 import type { UserProfile } from '../types/api'
 
 interface ProfileDraft {
@@ -25,9 +26,38 @@ interface UserState {
 }
 
 const storedToken = localStorage.getItem('token')
+const initialKnowledgePointIds = ['kp_func_mono', 'kp_trig_def', 'kp_derivative_concept']
 
 const hasMissingProfile = (user: UserProfile): boolean =>
   !user.grade || !user.textbook_version || !user.target_university
+
+async function ensureCurrentPlanForUser(
+  user: UserProfile,
+  options?: { force?: boolean; source?: string; title?: string }
+): Promise<UserProfile> {
+  if (hasMissingProfile(user)) {
+    return user
+  }
+  if (!options?.force && user.current_plan_id) {
+    return user
+  }
+
+  const generated = await planService.generatePlan({
+    title: options?.title ?? '初始学习计划',
+    source: options?.source ?? 'profile_backfill',
+    knowledge_point_ids: initialKnowledgePointIds,
+    set_as_current: true,
+  })
+
+  return {
+    ...user,
+    current_plan_id: generated.plan.id,
+    current_plan_snapshot: {
+      title: generated.plan.title,
+      status: generated.plan.status,
+    },
+  }
+}
 
 export const useUserStore = create<UserState>((set, get) => ({
   user: null,
@@ -72,10 +102,14 @@ export const useUserStore = create<UserState>((set, get) => ({
       set({ isLoading: true, error: null })
       try {
         const user = await authService.fetchMe()
+        const userWithPlan = await ensureCurrentPlanForUser(user, {
+          source: 'profile_backfill',
+          title: '初始学习计划',
+        })
         set({
-          user,
+          user: userWithPlan,
           isLoading: false,
-          needsOnboarding: hasMissingProfile(user),
+          needsOnboarding: hasMissingProfile(userWithPlan),
         })
       } catch (error) {
         const message = error instanceof Error ? error.message : '获取用户信息失败'
@@ -88,9 +122,14 @@ export const useUserStore = create<UserState>((set, get) => ({
       set({ isLoading: true, error: null })
       try {
         const user = await authService.updateMe(draft)
+        const userWithPlan = await ensureCurrentPlanForUser(user, {
+          force: true,
+          source: 'onboarding',
+          title: '初始学习计划',
+        })
         set({
-          user,
-          needsOnboarding: hasMissingProfile(user),
+          user: userWithPlan,
+          needsOnboarding: hasMissingProfile(userWithPlan),
           isLoading: false,
         })
       } catch (error) {

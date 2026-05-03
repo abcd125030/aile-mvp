@@ -39,6 +39,15 @@ class CreatePlanRequest(BaseModel):
     set_as_current: bool = True
 
 
+class GeneratePlanRequest(BaseModel):
+    """Auto-generate one executable plan from weak knowledge points."""
+
+    title: str = "智能巩固计划"
+    source: str = "manual_generate"
+    knowledge_point_ids: list[str]
+    set_as_current: bool = True
+
+
 class UpdatePlanStatusRequest(BaseModel):
     """Plan status update request."""
 

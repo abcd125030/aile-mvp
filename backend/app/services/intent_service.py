@@ -24,6 +24,10 @@ class IntentService:
     async def classify(self, *, message: str) -> IntentResult:
         llm_result = await self._classify_with_llm(message)
         if llm_result is not None:
+            if not list(llm_result.slots.get("knowledge_point_ids") or []):
+                fallback_kp_ids = await self._extract_knowledge_points(message)
+                if fallback_kp_ids:
+                    llm_result.slots["knowledge_point_ids"] = fallback_kp_ids
             return llm_result
         return await self._classify_with_rules(message)
 
@@ -81,10 +85,23 @@ class IntentService:
         for item in all_points:
             if item.name in text:
                 matched.append(item.id)
-        if "三角函数" in text and "kp_trig_def" not in matched:
-            matched.append("kp_trig_def")
-        if "复合函数单调" in text and "kp_comp_func_mono" not in matched:
-            matched.append("kp_comp_func_mono")
+
+        keyword_mapping: list[tuple[str, str]] = [
+            ("三角函数", "kp_trig_def"),
+            ("正弦", "kp_sin_func"),
+            ("余弦", "kp_cos_func"),
+            ("复合函数单调", "kp_comp_func_mono"),
+            ("复合函数求导", "kp_derivative_chain"),
+            ("链式法则", "kp_derivative_chain"),
+            ("导数定义", "kp_derivative_concept"),
+            ("导数概念", "kp_derivative_concept"),
+            ("求导法则", "kp_derivative_basic"),
+            ("导数", "kp_derivative_concept"),
+            ("单调性", "kp_func_mono"),
+        ]
+        for keyword, kp_id in keyword_mapping:
+            if keyword in text and kp_id not in matched:
+                matched.append(kp_id)
         return matched[:3]
 
     async def _filter_valid_knowledge_points(self, kp_ids: list[str]) -> list[str]:

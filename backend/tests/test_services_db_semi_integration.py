@@ -187,6 +187,27 @@ async def test_task_service_submit_answer_marks_completed_from_pending(db_sessio
 
 
 @pytest.mark.asyncio
+async def test_task_service_submit_answer_accepts_labeled_option_text(db_session: AsyncSession):
+    user, _, task, exercise = await _seed_user_plan_task_exercise(db_session)
+    exercise.options = ["A. 正确选项", "B. 干扰项", "C. 干扰项", "D. 干扰项"]
+    await db_session.commit()
+
+    service = TaskService(
+        task_repository=TaskRepository(db_session),
+        plan_repository=PlanRepository(db_session),
+        knowledge_point_repository=KnowledgePointRepository(db_session),
+        exercise_repository=ExerciseRepository(db_session),
+    )
+
+    result = await service.submit_answer(
+        current_user=user,
+        task_id=str(task.id),
+        payload=SubmitAnswerRequest(exercise_id="ex_func_001", answer="A. 正确选项"),
+    )
+    assert result.is_correct is True
+
+
+@pytest.mark.asyncio
 async def test_task_service_invalid_transition_pending_to_completed_returns_400(
     db_session: AsyncSession,
 ):

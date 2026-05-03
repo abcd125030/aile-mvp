@@ -4,11 +4,15 @@ import uuid
 from datetime import datetime, timezone
 
 from app.core.exceptions import forbidden, not_found
+from app.models.learning_task import LearningTask
 from app.models.user import User
+from app.repositories.knowledge_point_repository import KnowledgePointRepository
 from app.repositories.plan_repository import PlanRepository
+from app.repositories.task_repository import TaskRepository
 from app.repositories.user_repository import UserRepository
 from app.schemas.plans import (
     CreatePlanRequest,
+    GeneratePlanRequest,
     LearningPlanResponse,
     PlanDetailResponse,
     UpdatePlanStatusRequest,
@@ -27,9 +31,13 @@ class PlanService:
         *,
         plan_repository: PlanRepository,
         user_repository: UserRepository,
+        task_repository: TaskRepository,
+        knowledge_point_repository: KnowledgePointRepository,
     ) -> None:
         self.plan_repository = plan_repository
         self.user_repository = user_repository
+        self.task_repository = task_repository
+        self.knowledge_point_repository = knowledge_point_repository
         self.session = plan_repository.session
 
     async def list_plans(self, *, current_user: User) -> list[LearningPlanResponse]:
@@ -93,6 +101,67 @@ class PlanService:
         await self.session.commit()
         refreshed_plan = await self.plan_repository.get_by_id(plan.id)
         return build_plan_response(refreshed_plan or plan)
+
+    async def generate_plan(
+        self,
+        *,
+        current_user: User,
+        payload: GeneratePlanRequest,
+    ) -> PlanDetailResponse:
+        knowledge_points = await self.knowledge_point_repository.get_by_ids(payload.knowledge_point_ids)
+        if not knowledge_points:
+            raise not_found("未找到可生成计划的知识点")
+
+        ordered_ids = [item.id for item in knowledge_points]
+        plan = await self.plan_repository.create(
+            user_id=current_user.id,
+            title=payload.title,
+            status="active",
+            snapshot={
+                "source": payload.source,
+                "knowledge_point_ids": ordered_ids,
+            },
+        )
+
+        tasks: list[LearningTask] = []
+        for point in knowledge_points[:6]:
+            tasks.append(
+                LearningTask(
+                    plan_id=plan.id,
+                    title=f"概念梳理：{point.name}",
+                    type="concept_learning",
+                    status="pending",
+                    source=payload.source,
+                    knowledge_point_ids=[point.id],
+                    metadata_={"estimated_minutes": 12},
+                )
+            )
+            tasks.append(
+                LearningTask(
+                    plan_id=plan.id,
+                    title=f"巩固练习：{point.name}",
+                    type="practice",
+                    status="pending",
+                    source=payload.source,
+                    knowledge_point_ids=[point.id],
+                    metadata_={"estimated_minutes": 15},
+                )
+            )
+
+        for task in tasks:
+            await self.task_repository.save(task)
+
+        if payload.set_as_current:
+            current_user.current_plan_id = plan.id
+            self.session.add(current_user)
+
+        await self.session.commit()
+        refreshed_plan = await self.plan_repository.get_by_id(plan.id)
+
+        return PlanDetailResponse(
+            plan=build_plan_response(refreshed_plan or plan),
+            tasks=[build_task_response(task) for task in tasks],
+        )
 
     async def _get_owned_plan(
         self,

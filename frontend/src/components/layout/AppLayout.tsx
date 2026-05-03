@@ -1,5 +1,6 @@
 import { NavLink, Outlet } from 'react-router-dom'
 import useUserStore from '../../stores/useUserStore'
+import AileAvatar from '../ui/AileAvatar'
 
 export default function AppLayout() {
   const logout = useUserStore((state) => state.actions.logout)
@@ -7,24 +8,20 @@ export default function AppLayout() {
   const linkClass = ({ isActive }: { isActive: boolean }) =>
     `px-3 py-2 rounded-md text-sm font-medium transition-colors ${
       isActive
-        ? 'bg-indigo-700 text-white'
-        : 'text-gray-300 hover:bg-indigo-500 hover:text-white'
+        ? 'bg-white text-indigo-700'
+        : 'text-indigo-100 hover:bg-indigo-500 hover:text-white'
     }`
 
   return (
     <div className="min-h-screen flex flex-col">
-      {/* 顶部导航栏 */}
       <nav className="bg-indigo-600 shadow-md">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-14">
-            {/* Logo */}
-            <div className="flex-shrink-0">
-              <span className="text-white text-lg font-bold tracking-wide">
-                艾乐学伴
-              </span>
+            <div className="flex items-center gap-2">
+              <AileAvatar size={30} />
+              <span className="text-white text-lg font-bold tracking-wide">艾乐学伴</span>
             </div>
 
-            {/* 导航链接 */}
             <div className="flex items-center space-x-2">
               <NavLink to="/" className={linkClass} end>
                 主界面
@@ -40,7 +37,7 @@ export default function AppLayout() {
               </NavLink>
               <button
                 onClick={logout}
-                className="px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:bg-indigo-500 hover:text-white"
+                className="px-3 py-2 rounded-md text-sm font-medium text-indigo-100 hover:bg-indigo-500 hover:text-white"
               >
                 退出
               </button>
@@ -49,8 +46,7 @@ export default function AppLayout() {
         </div>
       </nav>
 
-      {/* 主内容区域 */}
-      <main className="flex-1">
+      <main className="flex-1 aile-page-enter">
         <Outlet />
       </main>
     </div>

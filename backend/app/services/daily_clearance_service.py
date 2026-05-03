@@ -11,6 +11,8 @@ from app.repositories.knowledge_point_repository import KnowledgePointRepository
 from app.repositories.plan_repository import PlanRepository
 from app.repositories.task_repository import TaskRepository
 from app.schemas.chat import IntentResult
+from app.schemas.content import ContentGenerateRequest
+from app.services.content_generation_service import ContentGenerationService
 
 
 class DailyClearanceService:
@@ -23,11 +25,13 @@ class DailyClearanceService:
         knowledge_point_repository: KnowledgePointRepository,
         plan_repository: PlanRepository,
         task_repository: TaskRepository,
+        content_generation_service: ContentGenerationService | None = None,
     ) -> None:
         self.daily_problem_repository = daily_problem_repository
         self.knowledge_point_repository = knowledge_point_repository
         self.plan_repository = plan_repository
         self.task_repository = task_repository
+        self.content_generation_service = content_generation_service
         self.session = task_repository.session
 
     async def record_problem_and_generate_task(
@@ -55,6 +59,11 @@ class DailyClearanceService:
                 problem_id=daily_problem.id,
                 task_id=task.id,
                 resolution_type="practice_task",
+            )
+            await self._maybe_generate_content_package(
+                task=task,
+                problem_id=daily_problem.id,
+                kp_ids=list(task.knowledge_point_ids or []),
             )
         return daily_problem, task
 
@@ -105,3 +114,28 @@ class DailyClearanceService:
         self.session.add(current_user)
         await self.session.flush()
         return created
+
+    async def _maybe_generate_content_package(
+        self,
+        *,
+        task: LearningTask,
+        problem_id: uuid.UUID,
+        kp_ids: list[str],
+    ) -> None:
+        if self.content_generation_service is None or not kp_ids:
+            return
+        try:
+            package = await self.content_generation_service.generate_for_task(
+                payload=ContentGenerateRequest(
+                    knowledge_point_ids=kp_ids,
+                    style="encouraging",
+                    target_minutes=8,
+                ),
+                associated_task_id=task.id,
+                associated_problem_id=problem_id,
+            )
+        except Exception:
+            # 内容包生成失败不应阻断日清任务创建主链路。
+            return
+        task.content_package_id = package.id
+        await self.task_repository.save(task)

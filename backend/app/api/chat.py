@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_db
 from app.dependencies.auth import get_current_user
 from app.models.user import User
+from app.repositories.content_package_repository import ContentPackageRepository
 from app.repositories.daily_problem_repository import DailyProblemRepository
 from app.repositories.knowledge_point_repository import KnowledgePointRepository
 from app.repositories.plan_repository import PlanRepository
@@ -18,6 +19,7 @@ from app.repositories.task_repository import TaskRepository
 from app.repositories.user_behavior_event_repository import UserBehaviorEventRepository
 from app.schemas.chat import ChatHistoryMessageResponse, ChatMessageRequest, ChatSessionResponse
 from app.services.chat_service import ChatService
+from app.services.content_generation_service import ContentGenerationService
 from app.services.daily_clearance_service import DailyClearanceService
 from app.services.intent_service import IntentService
 from app.services.llm import LLMService
@@ -31,6 +33,11 @@ def get_chat_service(db: AsyncSession) -> ChatService:
     daily_problem_repository = DailyProblemRepository(db)
     plan_repository = PlanRepository(db)
     task_repository = TaskRepository(db)
+    content_generation_service = ContentGenerationService(
+        llm_service=llm_service,
+        knowledge_point_repository=knowledge_point_repository,
+        content_package_repository=ContentPackageRepository(db),
+    )
     return ChatService(
         llm_service=llm_service,
         intent_service=IntentService(
@@ -43,6 +50,7 @@ def get_chat_service(db: AsyncSession) -> ChatService:
             knowledge_point_repository=knowledge_point_repository,
             plan_repository=plan_repository,
             task_repository=task_repository,
+            content_generation_service=content_generation_service,
         ),
     )
 

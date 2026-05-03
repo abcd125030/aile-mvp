@@ -59,6 +59,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
       let assistantBuffer = ''
       let assistantMessageCreated = false
+      let latestMetadata: {
+        intent?: string | null
+        knowledge_point_ids?: string[]
+        task_id?: string | null
+      } = {}
 
       const handleEvent = (event: ChatSseEvent) => {
         if (event.event === 'token') {
@@ -72,6 +77,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
                   role: 'assistant',
                   content: assistantBuffer,
                   created_at: new Date().toISOString(),
+                  intent: latestMetadata.intent ?? null,
+                  knowledge_point_ids: latestMetadata.knowledge_point_ids,
+                  task_id: latestMetadata.task_id ?? null,
                 },
               ],
             }))
@@ -93,9 +101,27 @@ export const useChatStore = create<ChatState>((set, get) => ({
         }
 
         if (event.event === 'metadata') {
+          latestMetadata = {
+            intent: event.data.intent,
+            knowledge_point_ids: event.data.knowledge_point_ids,
+            task_id: event.data.task_id,
+          }
           set({
             sessionId: event.data.session_id,
             taskCreatedHintTaskId: event.data.task_created ? event.data.task_id : null,
+          })
+          set((state) => {
+            const messages = [...state.messages]
+            const lastIndex = messages.length - 1
+            if (lastIndex >= 0 && messages[lastIndex].role === 'assistant') {
+              messages[lastIndex] = {
+                ...messages[lastIndex],
+                intent: event.data.intent,
+                knowledge_point_ids: event.data.knowledge_point_ids,
+                task_id: event.data.task_id,
+              }
+            }
+            return { messages }
           })
           return
         }
@@ -110,16 +136,22 @@ export const useChatStore = create<ChatState>((set, get) => ({
         }
       }
 
-      await chatService.streamMessage(
-        {
-          session_id: get().sessionId ?? undefined,
-          message: trimmed,
-          journey: 'DAILY_CLEARANCE',
-        },
-        handleEvent
-      )
-
-      set({ isStreaming: false })
+      try {
+        await chatService.streamMessage(
+          {
+            session_id: get().sessionId ?? undefined,
+            message: trimmed,
+            journey: 'DAILY_CLEARANCE',
+          },
+          handleEvent
+        )
+      } catch (error) {
+        set({
+          error: error instanceof Error ? error.message : '发送消息失败',
+        })
+      } finally {
+        set({ isStreaming: false })
+      }
     },
 
     clearTaskHint: () => set({ taskCreatedHintTaskId: null }),

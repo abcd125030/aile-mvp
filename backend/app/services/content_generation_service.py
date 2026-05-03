@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import json
+import uuid
 
 from app.core.exceptions import bad_request
+from app.models.content_package import ContentPackage
 from app.repositories.content_package_repository import ContentPackageRepository
 from app.repositories.knowledge_point_repository import KnowledgePointRepository
 from app.schemas.content import ContentGenerateRequest, ContentGenerateResponse, ContentSection
@@ -27,6 +29,41 @@ class ContentGenerationService:
         self.session = content_package_repository.session
 
     async def generate(self, *, payload: ContentGenerateRequest) -> ContentGenerateResponse:
+        package, sections = await self._generate_and_persist(
+            payload=payload,
+            associated_task_id=None,
+            associated_problem_id=None,
+            commit=True,
+        )
+        return ContentGenerateResponse(
+            content_package_id=str(package.id),
+            status=package.status,
+            sections=sections,
+        )
+
+    async def generate_for_task(
+        self,
+        *,
+        payload: ContentGenerateRequest,
+        associated_task_id: uuid.UUID,
+        associated_problem_id: uuid.UUID | None = None,
+    ) -> ContentPackage:
+        package, _ = await self._generate_and_persist(
+            payload=payload,
+            associated_task_id=associated_task_id,
+            associated_problem_id=associated_problem_id,
+            commit=False,
+        )
+        return package
+
+    async def _generate_and_persist(
+        self,
+        *,
+        payload: ContentGenerateRequest,
+        associated_task_id: uuid.UUID | None,
+        associated_problem_id: uuid.UUID | None,
+        commit: bool,
+    ) -> tuple[ContentPackage, list[ContentSection]]:
         points = await self.knowledge_point_repository.get_by_ids(payload.knowledge_point_ids)
         if not points:
             raise bad_request("未找到有效知识点，无法生成讲解内容")
@@ -43,14 +80,15 @@ class ContentGenerationService:
             "style": payload.style,
             "target_minutes": payload.target_minutes,
         }
-        package = await self.content_package_repository.create(manifest=manifest, status="ready")
-        await self.session.commit()
-
-        return ContentGenerateResponse(
-            content_package_id=str(package.id),
-            status=package.status,
-            sections=sections,
+        package = await self.content_package_repository.create(
+            manifest=manifest,
+            status="ready",
+            associated_task_id=associated_task_id,
+            associated_problem_id=associated_problem_id,
         )
+        if commit:
+            await self.session.commit()
+        return package, sections
 
     async def _generate_sections(
         self,

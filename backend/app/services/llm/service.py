@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator
 
-import httpx
-
 from app.config import settings
 from app.core.exceptions import bad_request
 from app.services.llm.base import BaseLLMProvider, LLMMessage
@@ -33,15 +31,15 @@ class LLMService:
         max_tokens: int = 512,
         fallback_text: str = "我在整理思路，先给你一个简短方向：先把题目信息再描述得具体一点。",
     ) -> str:
-        provider = self.provider or self._build_provider()
-        self.provider = provider
         try:
+            provider = self.provider or self._build_provider()
+            self.provider = provider
             return await provider.chat(
                 messages=messages,
                 temperature=temperature,
                 max_tokens=max_tokens,
             )
-        except (httpx.HTTPError, RuntimeError):
+        except Exception:
             return fallback_text
 
     async def stream_chat(
@@ -52,9 +50,9 @@ class LLMService:
         max_tokens: int = 512,
         fallback_text: str = "我在整理思路，先给你一个简短方向：把不懂的点和你卡住的步骤再说一遍。",
     ) -> AsyncIterator[str]:
-        provider = self.provider or self._build_provider()
-        self.provider = provider
         try:
+            provider = self.provider or self._build_provider()
+            self.provider = provider
             async for chunk in provider.stream_chat(
                 messages=messages,
                 temperature=temperature,
@@ -62,6 +60,6 @@ class LLMService:
             ):
                 yield chunk
             return
-        except (httpx.HTTPError, RuntimeError):
+        except Exception:
             pass
         yield fallback_text

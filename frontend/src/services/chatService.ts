@@ -4,6 +4,8 @@ import type {
   ChatSseEvent,
   SendChatMessagePayload,
 } from '../types/api'
+import { appConfig } from '../config/appConfig'
+import { demoChatScriptByMessage, demoKnowledgePointNames } from '../mock/day6DemoData'
 
 import apiClient from './apiClient'
 
@@ -50,6 +52,8 @@ function parseSseFrame(frame: string): ChatSseEvent | null {
   }
 }
 
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
 export const chatService = {
   async listSessions(): Promise<ChatSession[]> {
     const response = await apiClient.get<ChatSession[]>('/chat/sessions')
@@ -65,6 +69,36 @@ export const chatService = {
     payload: SendChatMessagePayload,
     onEvent: (event: ChatSseEvent) => void
   ): Promise<void> {
+    const demoScript = appConfig.demoMode ? demoChatScriptByMessage[payload.message.trim()] : undefined
+    if (demoScript) {
+      onEvent({
+        event: 'metadata',
+        data: {
+          session_id: payload.session_id ?? 'demo-session-day6',
+          intent: demoScript.intent,
+          knowledge_point_ids: demoScript.knowledgePointIds,
+          task_created: Boolean(demoScript.taskId),
+          task_id: demoScript.taskId,
+          knowledge_point_names: demoKnowledgePointNames,
+        },
+      })
+
+      const chunks = demoScript.reply.match(/.{1,16}/g) ?? [demoScript.reply]
+      for (const text of chunks) {
+        await sleep(70)
+        onEvent({ event: 'token', data: { text } })
+      }
+
+      onEvent({
+        event: 'done',
+        data: {
+          session_id: payload.session_id ?? 'demo-session-day6',
+          assistant_message: demoScript.reply,
+        },
+      })
+      return
+    }
+
     const token = localStorage.getItem('token')
     const response = await fetch('/api/v1/chat/message', {
       method: 'POST',

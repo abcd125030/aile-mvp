@@ -73,8 +73,8 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-6">
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 aile-page-enter">
+      <div className="w-full max-w-md aile-card p-6 space-y-6">
         <div className="text-center space-y-2">
           <h1 className="text-2xl font-bold text-slate-900">艾乐学伴</h1>
           <p className="text-sm text-slate-600">登录后继续你的学习计划</p>

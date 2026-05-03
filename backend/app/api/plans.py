@@ -6,10 +6,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_db
 from app.dependencies.auth import get_current_user
 from app.models.user import User
+from app.repositories.knowledge_point_repository import KnowledgePointRepository
 from app.repositories.plan_repository import PlanRepository
+from app.repositories.task_repository import TaskRepository
 from app.repositories.user_repository import UserRepository
 from app.schemas.plans import (
     CreatePlanRequest,
+    GeneratePlanRequest,
     LearningPlanResponse,
     PlanDetailResponse,
     UpdatePlanStatusRequest,
@@ -23,6 +26,8 @@ def get_plan_service(db: AsyncSession) -> PlanService:
     return PlanService(
         plan_repository=PlanRepository(db),
         user_repository=UserRepository(db),
+        task_repository=TaskRepository(db),
+        knowledge_point_repository=KnowledgePointRepository(db),
     )
 
 
@@ -43,6 +48,16 @@ async def create_plan(
 ) -> LearningPlanResponse:
     """Create a new plan for the current user."""
     return await get_plan_service(db).create_plan(current_user=current_user, payload=payload)
+
+
+@router.post("/generate", response_model=PlanDetailResponse, status_code=201)
+async def generate_plan(
+    payload: GeneratePlanRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> PlanDetailResponse:
+    """Generate one executable plan and tasks from weak knowledge points."""
+    return await get_plan_service(db).generate_plan(current_user=current_user, payload=payload)
 
 
 @router.get("/{plan_id}", response_model=PlanDetailResponse)

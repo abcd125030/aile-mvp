@@ -1,5 +1,6 @@
 """Learning task service."""
 
+import re
 import uuid
 
 from app.core.exceptions import bad_request, forbidden, not_found
@@ -179,7 +180,22 @@ class TaskService:
         exercise_type = (exercise.metadata_ or {}).get("type")
         if exercise.options is None or exercise_type == "fill_blank":
             return actual.lower() == expected.lower()
-        return actual == expected
+        return (
+            TaskService._normalize_choice_answer(actual)
+            == TaskService._normalize_choice_answer(expected)
+        )
+
+    @staticmethod
+    def _normalize_choice_answer(answer: str) -> str:
+        normalized = (answer or "").strip()
+        if not normalized:
+            return normalized
+        if len(normalized) == 1 and normalized.isalpha():
+            return normalized.upper()
+        matched = re.match(r"^\s*([A-Za-z])\s*[.)、]\s*.*$", normalized)
+        if matched:
+            return matched.group(1).upper()
+        return normalized
 
     @staticmethod
     def _utcnow():

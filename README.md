@@ -42,12 +42,17 @@
 docker-compose up --build
 ```
 
+若 Windows 终端无法直接识别 `docker` 命令，可在 WSL 中执行：
+
+```bash
+wsl -e bash -lc "cd /mnt/d/AI智学体 && docker compose up --build -d"
+```
+
 启动完成后：
 
 - 前端页面：http://localhost:3000
 - 后端健康检查：http://localhost:8000/health
-- PostgreSQL：localhost:5432
-- Redis：localhost:6379
+- PostgreSQL 与 Redis 仅在 Docker 内网暴露（避免与本机已有服务端口冲突）
 
 ### 停止服务
 
@@ -55,11 +60,38 @@ docker-compose up --build
 docker-compose down
 ```
 
+WSL 场景可执行：
+
+```bash
+wsl -e bash -lc "cd /mnt/d/AI智学体 && docker compose down"
+```
+
 如需清除数据卷（重置数据库）：
 
 ```bash
 docker-compose down -v
 ```
+
+### Day 6 演示模式（可选）
+
+1. 执行 `database/03_day6_demo_seed.sql`，准备 Day 6 场景数据
+2. 在 `frontend/.env` 配置：
+
+```env
+VITE_DEMO_MODE=true
+```
+
+3. 参考 `Day6-演示场景脚本.md` 进行 A/B/C 三场景演示
+
+### Day 7 集成验证（推荐）
+
+1. 先执行非 Docker 基线自检（前后端本地启动，确认核心流程可用）
+2. 再执行 Docker 冷启动全链路回归（推荐使用上面的 WSL 命令）
+3. 重点检查：
+   - 健康检查：`http://localhost:8000/health`
+   - 前端入口：`http://localhost:3000`
+   - 慢响应提示：对话等待超过 10 秒应出现“艾乐正在思考，请稍候...”
+   - 异常兜底：前端运行时异常时不白屏，可返回首页
 
 ## 演示账号
 

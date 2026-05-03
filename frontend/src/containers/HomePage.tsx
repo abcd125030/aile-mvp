@@ -1,6 +1,9 @@
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 
+import AileAvatar from '../components/ui/AileAvatar'
+import EmptyState from '../components/ui/EmptyState'
+import SkeletonBlock from '../components/ui/SkeletonBlock'
 import usePlanStore from '../stores/usePlanStore'
 import useUserStore from '../stores/useUserStore'
 
@@ -21,9 +24,9 @@ export default function HomePage() {
   const countdownDays = Number((user?.settings?.exam_countdown_days as number | undefined) ?? 240)
 
   return (
-    <div className="min-h-screen bg-slate-50 px-4 py-6 md:px-8">
+    <div className="min-h-screen bg-slate-50 px-4 py-6 md:px-8 aile-page-enter">
       <div className="max-w-4xl mx-auto space-y-6">
-        <section className="bg-white border border-slate-200 rounded-2xl p-6">
+        <section className="aile-card p-6">
           <p className="text-sm text-slate-500">目标院校</p>
           <h1 className="text-2xl font-bold text-slate-900 mt-1">{targetUniversity}</h1>
           <div className="mt-4 flex flex-wrap gap-3">
@@ -36,7 +39,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section className="bg-white border border-slate-200 rounded-2xl p-6">
+        <section className="aile-card p-6">
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-sm text-slate-500">当前学习任务</p>
@@ -51,8 +54,9 @@ export default function HomePage() {
             </div>
             <button
               onClick={() => navigate('/daily-clearance')}
-              className="shrink-0 rounded-lg bg-indigo-600 text-white px-4 py-2 text-sm"
+              className="shrink-0 rounded-lg bg-indigo-600 text-white px-4 py-2 text-sm inline-flex items-center gap-2"
             >
+              <AileAvatar size={20} />
               打开艾乐
             </button>
           </div>
@@ -63,7 +67,7 @@ export default function HomePage() {
                 if (currentTask) {
                   actions.setFocusedTaskId(currentTask.id)
                 }
-                navigate('/execution')
+                navigate(currentTask ? `/execution?taskId=${currentTask.id}` : '/execution')
               }}
               className="rounded-lg border border-indigo-200 text-indigo-700 bg-indigo-50 px-4 py-2 text-sm"
             >
@@ -74,7 +78,7 @@ export default function HomePage() {
                 if (currentTask) {
                   actions.setFocusedTaskId(currentTask.id)
                 }
-                navigate('/execution')
+                navigate(currentTask ? `/execution?taskId=${currentTask.id}` : '/execution')
               }}
               className="rounded-lg border border-slate-300 text-slate-700 px-4 py-2 text-sm"
             >
@@ -89,8 +93,22 @@ export default function HomePage() {
           </div>
         </section>
 
-        {isLoading && <p className="text-sm text-slate-500">加载中...</p>}
+        {isLoading && (
+          <section className="aile-card p-6 space-y-3">
+            <SkeletonBlock className="h-4 w-32" />
+            <SkeletonBlock className="h-10 w-full" />
+            <SkeletonBlock className="h-10 w-5/6" />
+          </section>
+        )}
         {error && <p className="text-sm text-red-600">{error}</p>}
+        {!isLoading && !currentPlan && (
+          <EmptyState
+            title="还没有学习计划"
+            description="去和艾乐聊聊今天的学习困惑，系统会自动生成你的学习任务。"
+            actionLabel="前往艾乐对话"
+            onAction={() => navigate('/daily-clearance')}
+          />
+        )}
         {currentPlan && (
           <p className="text-sm text-slate-500">
             当前计划：{currentPlan.title}（{currentPlan.status}）

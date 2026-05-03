@@ -18,6 +18,7 @@ interface PlanState {
   actions: {
     fetchCurrentPlanAndTasks: () => Promise<void>
     setFocusedTaskId: (taskId: string | null) => void
+    patchTask: (task: LearningTask) => void
   }
 }
 
@@ -42,6 +43,12 @@ const groupTasks = (tasks: LearningTask[]): GroupedTasks => {
   }
   return grouped
 }
+
+const flattenGroupedTasks = (groupedTasks: GroupedTasks): LearningTask[] => [
+  ...groupedTasks.in_progress,
+  ...groupedTasks.pending,
+  ...groupedTasks.completed,
+]
 
 export const usePlanStore = create<PlanState>((set) => ({
   currentPlan: null,
@@ -82,6 +89,16 @@ export const usePlanStore = create<PlanState>((set) => ({
 
     setFocusedTaskId: (taskId: string | null) => {
       set({ focusedTaskId: taskId })
+    },
+
+    patchTask: (task: LearningTask) => {
+      set((state) => {
+        const allTasks = flattenGroupedTasks(state.groupedTasks)
+        const nextTasks = allTasks.some((item) => item.id === task.id)
+          ? allTasks.map((item) => (item.id === task.id ? task : item))
+          : [...allTasks, task]
+        return { groupedTasks: groupTasks(nextTasks) }
+      })
     },
   },
 }))
