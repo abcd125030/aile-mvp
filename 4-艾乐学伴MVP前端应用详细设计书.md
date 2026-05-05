@@ -17,21 +17,21 @@
 
 ### 2.1 技术栈明细
 
-| 类别 | 选型 | 版本 | 用途说明 |
-| --- | --- | --- | --- |
-| 框架 | React | 18+ | 构建组件化 UI，支持并发特性 |
-| 语言 | TypeScript | 5.x | 提供静态类型安全，与后端 API 类型严格对齐 |
-| 构建工具 | Vite | 5.x | 极速开发与构建 |
-| 路由 | React Router | 6.x | 声明式路由，支持嵌套路由与数据加载 |
-| 状态管理 | Zustand | 4.x | 轻量灵活的全局状态管理 |
-| HTTP 客户端 | axios | 1.x | 处理 REST API 调用 |
-| WebSocket | 原生 WebSocket API | - | 处理实时消息（进度、介入、通知） |
-| UI 方案 | 自研组件 + Tailwind CSS | 3.x | 基于 Tailwind 工具类构建设计系统 |
-| 拖拽库 | @dnd-kit | 6.x | 支持“日清”计划调整等拖拽交互 |
-| 图表库 | Recharts | 2.x | 诊断报告等数据可视化 |
-| 音频处理 | Web Audio API / `<audio>` | - | 语音播放与录制 |
-| 测试框架 | Vitest + React Testing Library | - | 单元与组件测试 |
-| 代码规范 | ESLint + Prettier | - | 代码质量与风格统一 |
+| 类别        | 选型                           | 版本 | 用途说明                                  |
+| ----------- | ------------------------------ | ---- | ----------------------------------------- |
+| 框架        | React                          | 18+  | 构建组件化 UI，支持并发特性               |
+| 语言        | TypeScript                     | 5.x  | 提供静态类型安全，与后端 API 类型严格对齐 |
+| 构建工具    | Vite                           | 5.x  | 极速开发与构建                            |
+| 路由        | React Router                   | 6.x  | 声明式路由，支持嵌套路由与数据加载        |
+| 状态管理    | Zustand                        | 4.x  | 轻量灵活的全局状态管理                    |
+| HTTP 客户端 | axios                          | 1.x  | 处理 REST API 调用                        |
+| WebSocket   | 原生 WebSocket API             | -    | 处理实时消息（进度、介入、通知）          |
+| UI 方案     | 自研组件 + Tailwind CSS        | 3.x  | 基于 Tailwind 工具类构建设计系统          |
+| 拖拽库      | @dnd-kit                       | 6.x  | 支持“日清”计划调整等拖拽交互            |
+| 图表库      | Recharts                       | 2.x  | 诊断报告等数据可视化                      |
+| 音频处理    | Web Audio API /`<audio>`     | -    | 语音播放与录制                            |
+| 测试框架    | Vitest + React Testing Library | -    | 单元与组件测试                            |
+| 代码规范    | ESLint + Prettier              | -    | 代码质量与风格统一                        |
 
 > 结论：文档已明确采用 **React 18 + TypeScript + Tailwind CSS** 技术方案。
 

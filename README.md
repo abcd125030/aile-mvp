@@ -42,12 +42,17 @@
 
 ```env
 POSTGRES_PASSWORD=abcd125030
+POSTGRES_USER=postgres
+POSTGRES_DB=aile_mvp
+PG_HOST=host.docker.internal
+PG_PORT=5432
+REDIS_URL=redis://:redis123456@host.docker.internal:6379/0
 JWT_SECRET=dev-secret-key-change-in-production
 LLM_PROVIDER=qwen
 LLM_MODEL=qwen-plus
 LLM_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
-LLM_API_KEY=你的DashScopeKey
-LLM_TIMEOUT_SECONDS=30
+LLM_API_KEY=your_dashscope_key
+LLM_TIMEOUT_SECONDS=120
 ```
 
 然后执行：
@@ -66,7 +71,10 @@ wsl -e bash -lc "cd /mnt/d/AI智学体 && docker compose up --build -d"
 
 ```bash
 cd /mnt/d/AI智学体
+# 如果先重新构建镜像，再启动容器
 docker compose up --build -d
+# 如果只是后台启动服务
+docker compose up -d
 ```
 
 注意：在 WSL 里不要再输入 `wsl -e ...`。
@@ -101,6 +109,65 @@ docker compose down
 ```bash
 docker-compose down -v
 ```
+
+### Linux 服务器部署（复用现有 PostgreSQL/Redis）
+
+以下步骤适用于服务器目录为 `/alidata/ai-zhixue`，并使用 `docker-compose-linux.yml` 部署前后端。
+
+1. 开通 `8095` 端口对外访问（同时确保云安全组已放行 `8095/TCP`）：
+
+```bash
+# firewalld（CentOS/RHEL 常见）
+firewall-cmd --permanent --add-port=8095/tcp
+firewall-cmd --reload
+firewall-cmd --list-ports | grep 8095
+```
+
+2. 确认 `docker-compose-linux.yml` 前端端口映射为 `8095:80`（对应 `frontend` 的 `ports`）：
+
+```yaml
+ports:
+  - "8095:80"
+```
+
+3. 创建 `aile_mvp` 数据库：
+
+```bash
+docker exec -e PGPASSWORD=abcd125030 -it postgres \
+  psql -U postgres -d postgres -c "CREATE DATABASE aile_mvp;"
+```
+
+4. 初始化数据库结构与种子数据：
+
+```bash
+cd /alidata/ai-zhixue
+
+# 1) 建表
+docker exec -i postgres psql -U postgres -d aile_mvp < database/01_ddl.sql
+
+# 2) 初始化种子数据（推荐）
+docker exec -i postgres psql -U postgres -d aile_mvp < database/02_seed.sql
+
+# 3) 演示模式（可选）
+docker exec -i postgres psql -U postgres -d aile_mvp < database/03_day6_demo_seed.sql
+```
+
+5. 首次构建并启动：
+
+```bash
+docker compose -f docker-compose-linux.yml --env-file .env up -d --build
+```
+
+6. 前端变更后强制重建前端容器：
+
+```bash
+docker compose -f docker-compose-linux.yml --env-file .env up -d --build --force-recreate frontend
+```
+
+部署完成后访问：
+
+- 前端页面：`http://<服务器公网IP>:8095`
+- 后端健康检查：`http://<服务器公网IP>:8000/health`
 
 ### Day 6 演示模式（可选）
 

@@ -1,0 +1,36 @@
+services:
+  backend:
+    build: ./backend
+    image: ai-zhixue-backend:latest
+    container_name: ai-zhixue-backend
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@${PG_HOST:-host.docker.internal}:${PG_PORT:-5432}/${POSTGRES_DB:-aile_mvp}
+      REDIS_URL: ${REDIS_URL:-redis://host.docker.internal:6379/0}
+      JWT_SECRET: ${JWT_SECRET:-change-this-in-production}
+      LLM_PROVIDER: ${LLM_PROVIDER:-qwen}
+      LLM_MODEL: ${LLM_MODEL:-qwen-plus}
+      LLM_BASE_URL: ${LLM_BASE_URL:-https://dashscope.aliyuncs.com/compatible-mode/v1}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_TIMEOUT_SECONDS: ${LLM_TIMEOUT_SECONDS:-30}
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health')\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  frontend:
+    build: ./frontend
+    image: ai-zhixue-frontend:latest
+    container_name: ai-zhixue-frontend
+    restart: unless-stopped
+    ports:
+      - "8095:80"
+    depends_on:
+      backend:
+        condition: service_healthy
